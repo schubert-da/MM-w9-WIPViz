@@ -3,6 +3,7 @@
 <head>
     <title>Women in Parliament</title>
     <script src="https://d3js.org/d3.v4.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/d3-legend/2.25.6/d3-legend.js"></script>
     <style>
         circle:hover{
             fill: #F8FFF4 !important;
@@ -34,7 +35,6 @@
 
         .vizContainer{
             margin: auto;
-            margin-top: 50px;
             border: 1px solid #666;
             box-shadow: 2px 2px 2px 2px #999;
             padding: 5px 10px;
@@ -86,6 +86,18 @@
             text-align: justify;
         }
 
+        text.label{
+            font-size: 11px;
+            font-family: Helvetica;
+            fill: #444;
+        }
+
+        .legendTitle tspan{
+            font-size: 12px;
+            fill: #222;
+            font-weight: bold;
+        }
+
     </style>
 </head>
 <body>
@@ -96,10 +108,10 @@
                     <h2>The Proportion of Seats held by Women in European Parliaments</h2>
                     <div class="row">
                     <p class="column">
-                    This chart shows the <span style="font-weight:bold; color: #0B7189">proportion of women in parliaments</span> across several European nations in <b>2019</b>. 
-                    While Sweden is the closest to covering the gender gap with 47% of seats going to women, <span style="font-weight:bold; color: #0B7189">many countries are still far from reaching equal gender</span></p>
+                    This chart shows the <span style="font-weight:bold">proportion of women in parliaments</span> across several European nations in <b>2019</b>. 
+                    While Sweden is the closest to covering the gender gap with 47% of seats going to women, <span style="font-weight:bold; color: #A16928">many countries are still far from reaching equal gender</span></p>
                     <p style="padding-bottom: 5px;" class="column">
-                    <span style="font-weight:bold; color: #0B7189;">representation</span>.<br><br>Each circle denotes a single country and its size is determined by the share of females in government.<b> Click the circles</b> for further details.</p>
+                    <span style="font-weight:bold; color: #A16928;">representation</span>.<br><br>Each circle denotes a single country and its size is determined by the share of females in government.<b> Click the circles</b> for further details.</p>
                     </div>
                 </div>
                 <div id="my_dataviz"></div>
@@ -131,11 +143,36 @@
 
         function drawViz(data){
 
-        // Ordinal color scale for circles
-        var colorScale = d3.scaleOrdinal()
-        .domain(d3.extent(data, d=> +d.perc))
-        .range(["#2b303a","#0B7189","#004e52","#888da7","#b1740f","#d1d0a3","#283044"])
+        var colorScale2 = d3.scaleThreshold()
+        .domain([0.15,0.20,0.25,0.30,0.35,0.40,0.45])
+        .range(["#A16928","#bd925a","#d6bd8d","#edeac2","#b5c8b8","#79a7ac","#2887a1","#1F697D"])
+
+        var svg = d3.select("svg");
+
+        svg.append("g")
+        .attr("class", "legendQuant")
+        .attr("transform", "translate(15,8)");
         
+
+        var legend = d3.legendColor()
+        .labelFormat(d3.format(".0f"))
+        .labels(d3.legendHelpers.thresholdLabels)
+        .labelDelimiter("-")
+        .title("Women in parliament (%)")
+        .titleWidth(150)
+        .shapeWidth(20)
+        .shapeHeight(10)
+        .shapePadding(-1)
+        .labelOffset(8)
+        .scale(colorScale2.copy().domain(colorScale2.domain().map(d => d*100)));
+
+        svg.select(".legendQuant")
+        .call(legend);
+        
+        d3.select("text.legendTitle tspan")
+        .attr("x","-1px")
+        .attr("dy","10px")
+
         var node = svg.append("g")
           .selectAll("circle.countries")
           .data(data)
@@ -146,13 +183,13 @@
         var circles = node
           .append("circle")
             .attr("class","countries")
-            .attr("r", d => d.perc * 85)
+            .attr("r", d => d.perc * 95)
             .attr("cx", width / 2)
             .attr("cy", height / 2)
-            .style("fill", d => colorScale(+d.perc))
-            .style("fill-opacity", 0.7)
+            .style("fill", d => colorScale2(+d.perc))
+            .style("fill-opacity", 0.85)
             .attr("stroke", "#d7d7d7")
-            .style("stroke-width", 2)
+            .style("stroke-width", 2.5)
             .on("click", function(d){
                 d3.select(this)
                 .transition()
@@ -173,7 +210,7 @@
         })
             .on("mouseout", function(d){
                 d.perc = d.perc2
-                d3.select(this).attr("r",d => d.perc * 85)
+                d3.select(this).attr("r",d => d.perc * 95)
                 simulation.force("forceX").initialize(data)
                 simulation.force("center").initialize(data)
                 simulation.force("charge").initialize(data)
@@ -223,11 +260,11 @@
         
         // Features of the forces applied to the nodes:
         var simulation = d3.forceSimulation()
-            .force("forceX", d3.forceX().strength(d=> d.perc ).x(width / 2 ))
-            .force("forceY", d3.forceY().strength(d=> d.perc * 1.5).y(height / 2))
-            .force("center", d3.forceCenter().x(width / 2).y(height / 2)) // Attraction to the center of the svg area
+            .force("forceX", d3.forceX().strength(d=> d.perc * 1.2).x(width / 2 + 10))
+            .force("forceY", d3.forceY().strength(d=> d.perc * 1.5).y(height / 2 + 10))
+            .force("center", d3.forceCenter().x(width / 2 + 10).y(height / 2 + 10)) // Attraction to the center of the svg area
             .force("charge", d3.forceManyBody().strength(0.8)) // Nodes are attracted one each other of value is > 0
-            .force("collide", d3.forceCollide().strength(.03).radius(d => d.perc * 85 + 0.5 ).iterations(30)) // Force that avoids circle overlapping
+            .force("collide", d3.forceCollide().strength(.03).radius(d => d.perc * 90 + 0.5 ).iterations(30)) // Force that avoids circle overlapping
         
         // Apply these forces to the nodes and the tooltip and update their positions.
         simulation
